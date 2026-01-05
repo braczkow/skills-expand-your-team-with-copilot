@@ -48,6 +48,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Authentication state
   let currentUser = null;
 
+  // HTML escape function to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Time range mappings for the dropdown
   const timeRanges = {
     morning: { start: "06:00", end: "08:00" }, // Before school hours
@@ -548,6 +555,29 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `;
 
+    // Create social sharing buttons HTML
+    const shareUrl = `${window.location.origin}${window.location.pathname}`;
+    const shareText = `Check out ${name} at Mergington High School! ${details.description}`;
+    const escapedName = escapeHtml(name);
+    
+    const socialShareButtons = `
+      <div class="social-share-container">
+        <span class="share-label">Share:</span>
+        <button class="share-button share-twitter" data-activity="${escapedName}" title="Share on Twitter" aria-label="Share ${escapedName} on Twitter">
+          <span class="share-icon" aria-hidden="true">𝕏</span>
+        </button>
+        <button class="share-button share-facebook" data-activity="${escapedName}" title="Share on Facebook" aria-label="Share ${escapedName} on Facebook">
+          <span class="share-icon" aria-hidden="true">f</span>
+        </button>
+        <button class="share-button share-email" data-activity="${escapedName}" title="Share via Email" aria-label="Share ${escapedName} via Email">
+          <span class="share-icon" aria-hidden="true">✉</span>
+        </button>
+        <button class="share-button share-copy" data-activity="${escapedName}" title="Copy Link" aria-label="Copy link to share ${escapedName}">
+          <span class="share-icon" aria-hidden="true">🔗</span>
+        </button>
+      </div>
+    `;
+
     activityCard.innerHTML = `
       ${tagHtml}
       <h4>${name}</h4>
@@ -557,6 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
       ${capacityIndicator}
+      ${socialShareButtons}
       <div class="participants-list">
         <h5>Current Participants:</h5>
         <ul>
@@ -614,6 +645,63 @@ document.addEventListener("DOMContentLoaded", () => {
           openRegistrationModal(name);
         });
       }
+    }
+
+    // Add click handlers for social share buttons
+    const twitterButton = activityCard.querySelector(".share-twitter");
+    if (twitterButton) {
+      twitterButton.addEventListener("click", () => {
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        window.open(twitterUrl, "_blank", "width=550,height=420");
+      });
+    }
+
+    const facebookButton = activityCard.querySelector(".share-facebook");
+    if (facebookButton) {
+      facebookButton.addEventListener("click", () => {
+        const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        window.open(facebookUrl, "_blank", "width=550,height=420");
+      });
+    }
+
+    const emailButton = activityCard.querySelector(".share-email");
+    if (emailButton) {
+      emailButton.addEventListener("click", () => {
+        const subject = encodeURIComponent(`Check out this activity: ${name}`);
+        const body = encodeURIComponent(`${shareText}\n\nLearn more: ${shareUrl}`);
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+      });
+    }
+
+    const copyButton = activityCard.querySelector(".share-copy");
+    if (copyButton) {
+      copyButton.addEventListener("click", async () => {
+        try {
+          // Try using the modern Clipboard API first
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(shareUrl);
+            showMessage("Link copied to clipboard!", "success");
+          } else {
+            // Fallback for browsers that don't support Clipboard API
+            const textArea = document.createElement("textarea");
+            textArea.value = shareUrl;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              document.execCommand("copy");
+              showMessage("Link copied to clipboard!", "success");
+            } catch (err) {
+              showMessage("Failed to copy link. Please try again.", "error");
+            }
+            document.body.removeChild(textArea);
+          }
+        } catch (error) {
+          console.error("Failed to copy link:", error);
+          showMessage("Failed to copy link. Please try again.", "error");
+        }
+      });
     }
 
     activitiesList.appendChild(activityCard);
