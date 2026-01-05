@@ -520,23 +520,23 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     // Create social sharing buttons HTML
-    const shareUrl = `${window.location.origin}${window.location.pathname}?activity=${encodeURIComponent(name)}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}`;
     const shareText = `Check out ${name} at Mergington High School! ${details.description}`;
     
     const socialShareButtons = `
       <div class="social-share-container">
         <span class="share-label">Share:</span>
-        <button class="share-button share-twitter" data-activity="${name}" title="Share on Twitter">
-          <span class="share-icon">𝕏</span>
+        <button class="share-button share-twitter" data-activity="${name}" title="Share on Twitter" aria-label="Share ${name} on Twitter">
+          <span class="share-icon" aria-hidden="true">𝕏</span>
         </button>
-        <button class="share-button share-facebook" data-activity="${name}" title="Share on Facebook">
-          <span class="share-icon">f</span>
+        <button class="share-button share-facebook" data-activity="${name}" title="Share on Facebook" aria-label="Share ${name} on Facebook">
+          <span class="share-icon" aria-hidden="true">f</span>
         </button>
-        <button class="share-button share-email" data-activity="${name}" title="Share via Email">
-          <span class="share-icon">✉</span>
+        <button class="share-button share-email" data-activity="${name}" title="Share via Email" aria-label="Share ${name} via Email">
+          <span class="share-icon" aria-hidden="true">✉</span>
         </button>
-        <button class="share-button share-copy" data-activity="${name}" title="Copy Link">
-          <span class="share-icon">🔗</span>
+        <button class="share-button share-copy" data-activity="${name}" title="Copy Link" aria-label="Copy link to share ${name}">
+          <span class="share-icon" aria-hidden="true">🔗</span>
         </button>
       </div>
     `;
@@ -640,8 +640,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (copyButton) {
       copyButton.addEventListener("click", async () => {
         try {
-          await navigator.clipboard.writeText(shareUrl);
-          showMessage("Link copied to clipboard!", "success");
+          // Try using the modern Clipboard API first
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(shareUrl);
+            showMessage("Link copied to clipboard!", "success");
+          } else {
+            // Fallback for browsers that don't support Clipboard API
+            const textArea = document.createElement("textarea");
+            textArea.value = shareUrl;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              document.execCommand("copy");
+              showMessage("Link copied to clipboard!", "success");
+            } catch (err) {
+              showMessage("Failed to copy link. Please try again.", "error");
+            }
+            document.body.removeChild(textArea);
+          }
         } catch (error) {
           console.error("Failed to copy link:", error);
           showMessage("Failed to copy link. Please try again.", "error");
